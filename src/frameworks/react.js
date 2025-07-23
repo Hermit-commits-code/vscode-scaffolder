@@ -18,8 +18,9 @@ const vscode = require('vscode');
           }
       }
 
-      // Resolve project directory
-      const projectDir = path.resolve(projectPath);
+      // Resolve project directory within workspace
+      const workspaceDir = vscode.workspace.workspaceFolders[0].uri.fsPath;
+      const projectDir = path.join(workspaceDir, projectName);
 
       // Create Vite project
       const template = useTypescript ? 'react-ts' : 'react';
@@ -28,9 +29,12 @@ const vscode = require('vscode');
           viteCommand += ' --yes'; // Skip interactive prompts
       }
       try {
-          const terminal = vscode.window.createTerminal('Vite Scaffold');
+          const terminal = vscode.window.createTerminal({
+              name: 'Vite Scaffold',
+              cwd: workspaceDir // Set terminal working directory to workspace
+          });
           terminal.show();
-          terminal.sendText(`cd ${path.dirname(projectDir)} && ${viteCommand}`);
+          terminal.sendText(viteCommand);
           await new Promise((resolve, reject) => {
               const checkInterval = setInterval(() => {
                   if (fs.existsSync(path.join(projectDir, 'package.json'))) {
@@ -50,9 +54,12 @@ const vscode = require('vscode');
               vscode.window.showWarningMessage(`pnpm failed: ${error.message}. Falling back to npm.`);
               effectivePackageManager = 'npm';
               viteCommand = `${effectivePackageManager} create vite ${projectName} --template ${template}`;
-              const terminal = vscode.window.createTerminal('Vite Scaffold Fallback');
+              const terminal = vscode.window.createTerminal({
+                  name: 'Vite Scaffold Fallback',
+                  cwd: workspaceDir // Set terminal working directory to workspace
+              });
               terminal.show();
-              terminal.sendText(`cd ${path.dirname(projectDir)} && ${viteCommand}`);
+              terminal.sendText(viteCommand);
               await new Promise((resolve, reject) => {
                   const checkInterval = setInterval(() => {
                       if (fs.existsSync(path.join(projectDir, 'package.json'))) {
