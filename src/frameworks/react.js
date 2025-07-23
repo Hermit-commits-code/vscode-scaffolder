@@ -20,7 +20,7 @@ const { execSync } = require('child_process');
       // Install additional dependencies
       const devDeps = [];
       const deps = [];
-      if (useTailwind) devDeps.push('tailwindcss@latest', 'postcss@latest', 'autoprefixer@latest');
+      if (useTailwind) devDeps.push('@tailwindcss/postcss@latest', 'postcss@latest', 'autoprefixer@latest');
       if (useEslint) devDeps.push('eslint', 'eslint-config-prettier', 'eslint-plugin-react', 'eslint-plugin-react-hooks');
       if (usePrettier) devDeps.push('prettier');
       if (useRouter) deps.push('react-router-dom');
@@ -47,7 +47,7 @@ const { execSync } = require('child_process');
           fs.writeFileSync(path.join(projectPath, 'postcss.config.cjs'), `
   module.exports = {
       plugins: {
-          tailwindcss: {},
+          '@tailwindcss/postcss': {},
           autoprefixer: {}
       }
   };
