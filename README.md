@@ -11,14 +11,30 @@ Scaffold frontend projects with Vite in Visual Studio Code.
 
 This extension contributes the following settings:
 
-- `vscode-scaffolder.helloWorld`: Run a sample Hello World command.
+- vscodeScaffolder.createProject: Scaffold a new frontend project.
+
+
+## Usage
+
+Open Command Palette (Ctrl+Shift+P).
+
+
+
+Run "Scaffold New Project".
+
+
+
+Follow prompts to configure your project (e.g., project name, framework, options).
 
 ## Known Issues
 
-Initial setup in progress.
+Initial command implementation in progress.
 
 ## Release Notes
 
 ### 1.0.0
 
-Initial release with basic setup.
+- Initial setup with createProject command.
+- Supports React scaffolding with Vite (upcoming).
+
+
