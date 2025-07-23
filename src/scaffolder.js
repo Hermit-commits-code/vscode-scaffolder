@@ -1,20 +1,20 @@
-const vscode = require('vscode');
-  const path = require('path');
+const path = require('path');
   const { createReactProject } = require('./frameworks/react');
+  const { createVueProject } = require('./frameworks/vue');
 
   class Scaffolder {
       async createProject(options) {
-          const { framework } = options;
+          const { projectName, framework, packageManager } = options;
+          const projectPath = path.join(process.cwd(), projectName);
 
-          // Ensure project directory is unique
-          const projectPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, options.projectName);
-          if (require('fs').existsSync(projectPath)) {
-              throw new Error(`Directory ${options.projectName} already exists`);
+          if (!['npm', 'yarn', 'pnpm'].includes(packageManager)) {
+              throw new Error('Invalid package manager. Use npm, yarn, or pnpm.');
           }
 
-          // Dispatch to framework-specific scaffolder
           if (framework === 'react') {
               await createReactProject(projectPath, options);
+          } else if (framework === 'vue') {
+              await createVueProject(projectPath, options);
           } else {
               throw new Error(`Unsupported framework: ${framework}`);
           }
