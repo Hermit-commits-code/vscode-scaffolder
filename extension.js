@@ -119,6 +119,7 @@ const vscode = require('vscode');
               const scaffolder = new Scaffolder();
               try {
                   await scaffolder.createProject(options);
+                  vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
               } catch (error) {
                   if (error.message === 'pnpm-not-installed') {
                       const action = await vscode.window.showWarningMessage(
@@ -127,7 +128,6 @@ const vscode = require('vscode');
                       );
                       if (action === 'Install pnpm') {
                           try {
-                              // Try non-sudo installation first
                               const terminal = vscode.window.createTerminal('pnpm Install');
                               terminal.show();
                               terminal.sendText('npm install -g pnpm');
@@ -147,8 +147,8 @@ const vscode = require('vscode');
                                   }, 30000);
                               });
                               await scaffolder.createProject(options);
+                              vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
                           } catch (installError) {
-                              // Check for permission error
                               if (installError.message.includes('EACCES')) {
                                   const sudoAction = await vscode.window.showWarningMessage(
                                       'Permission denied installing pnpm. Run with sudo or use npm?',
@@ -175,6 +175,7 @@ const vscode = require('vscode');
                                               }, 30000);
                                           });
                                           await scaffolder.createProject(options);
+                                          vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
                                       } catch (sudoError) {
                                           vscode.window.showErrorMessage(
                                               `Failed to install pnpm with sudo: ${sudoError.message}. Please run 'sudo npm install -g pnpm' manually in a terminal.`
@@ -184,6 +185,7 @@ const vscode = require('vscode');
                                   } else if (sudoAction === 'Use npm') {
                                       options.packageManager = 'npm';
                                       await scaffolder.createProject(options);
+                                      vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
                                   } else {
                                       return; // Cancel
                                   }
@@ -197,6 +199,7 @@ const vscode = require('vscode');
                       } else if (action === 'Use npm') {
                           options.packageManager = 'npm';
                           await scaffolder.createProject(options);
+                          vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
                       } else {
                           return; // Cancel
                       }
@@ -204,8 +207,6 @@ const vscode = require('vscode');
                       vscode.window.showErrorMessage(`Failed to create project: ${error.message}`);
                   }
               }
-
-              vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
           } catch (error) {
               vscode.window.showErrorMessage(`Unexpected error: ${error.message}`);
           }

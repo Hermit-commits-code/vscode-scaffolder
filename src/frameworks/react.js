@@ -1,4 +1,5 @@
-const { execSync } = require('child_process');
+const vscode = require('vscode');
+  const { execSync } = require('child_process');
   const fs = require('fs');
   const path = require('path');
   const { initializeGit } = require('../utils/git');
@@ -8,6 +9,7 @@ const { execSync } = require('child_process');
       const { projectName, useTypescript, useTailwind, useEslint, usePrettier, useRouter, packageManager } = options;
 
       // Check package manager availability
+      let effectivePackageManager = packageManager;
       if (packageManager === 'pnpm') {
           try {
               execSync('pnpm --version', { stdio: 'ignore' });
@@ -16,19 +18,64 @@ const { execSync } = require('child_process');
           }
       }
 
-      // Ensure project directory exists
+      // Resolve project directory
       const projectDir = path.resolve(projectPath);
-      if (!fs.existsSync(projectDir)) {
-          fs.mkdirSync(projectDir, { recursive: true });
-      }
 
       // Create Vite project
       const template = useTypescript ? 'react-ts' : 'react';
-      const viteCommand = packageManager === 'pnpm' ? 'create vite' : 'create vite@latest';
-      execSync(`${packageManager} ${viteCommand} ${projectName} --template ${template}`, {
-          cwd: path.dirname(projectDir),
-          stdio: 'inherit'
-      });
+      let viteCommand = `${effectivePackageManager} create vite ${projectName} --template ${template}`;
+      if (effectivePackageManager === 'pnpm') {
+          viteCommand += ' --yes'; // Skip interactive prompts
+      }
+      try {
+          const terminal = vscode.window.createTerminal('Vite Scaffold');
+          terminal.show();
+          terminal.sendText(`cd ${path.dirname(projectDir)} && ${viteCommand}`);
+          await new Promise((resolve, reject) => {
+              const checkInterval = setInterval(() => {
+                  if (fs.existsSync(path.join(projectDir, 'package.json'))) {
+                      clearInterval(checkInterval);
+                      terminal.dispose();
+                      resolve();
+                  }
+              }, 1000);
+              setTimeout(() => {
+                  clearInterval(checkInterval);
+                  terminal.dispose();
+                  reject(new Error('Vite project creation timed out'));
+              }, 30000);
+          });
+      } catch (error) {
+          if (effectivePackageManager === 'pnpm') {
+              vscode.window.showWarningMessage(`pnpm failed: ${error.message}. Falling back to npm.`);
+              effectivePackageManager = 'npm';
+              viteCommand = `${effectivePackageManager} create vite ${projectName} --template ${template}`;
+              const terminal = vscode.window.createTerminal('Vite Scaffold Fallback');
+              terminal.show();
+              terminal.sendText(`cd ${path.dirname(projectDir)} && ${viteCommand}`);
+              await new Promise((resolve, reject) => {
+                  const checkInterval = setInterval(() => {
+                      if (fs.existsSync(path.join(projectDir, 'package.json'))) {
+                          clearInterval(checkInterval);
+                          terminal.dispose();
+                          resolve();
+                      }
+                  }, 1000);
+                  setTimeout(() => {
+                      clearInterval(checkInterval);
+                      terminal.dispose();
+                      reject(new Error('Fallback npm project creation timed out'));
+                  }, 30000);
+              });
+          } else {
+              throw new Error(`Failed to create Vite project: ${error.message}`);
+          }
+      }
+
+      // Verify project directory is populated
+      if (!fs.existsSync(path.join(projectDir, 'package.json'))) {
+          throw new Error('Project creation failed: package.json not found');
+      }
 
       // Change to project directory
       process.chdir(projectDir);
@@ -42,10 +89,10 @@ const { execSync } = require('child_process');
       if (useRouter) deps.push('react-router-dom');
 
       if (devDeps.length > 0) {
-          execSync(`${packageManager} ${packageManager === 'yarn' ? 'add -D' : 'install --save-dev'} ${devDeps.join(' ')}`, { stdio: 'inherit' });
+          execSync(`${effectivePackageManager} ${effectivePackageManager === 'yarn' ? 'add -D' : 'install --save-dev'} ${devDeps.join(' ')}`, { stdio: 'inherit' });
       }
       if (deps.length > 0) {
-          execSync(`${packageManager} ${packageManager === 'yarn' ? 'add' : 'install'} ${deps.join(' ')}`, { stdio: 'inherit' });
+          execSync(`${effectivePackageManager} ${effectivePackageManager === 'yarn' ? 'add' : 'install'} ${deps.join(' ')}`, { stdio: 'inherit' });
       }
 
       // Configure Tailwind CSS
