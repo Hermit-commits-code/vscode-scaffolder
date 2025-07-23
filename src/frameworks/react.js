@@ -1,6 +1,8 @@
 const { execSync } = require('child_process');
   const fs = require('fs');
   const path = require('path');
+  const { initializeGit } = require('../utils/git');
+  const { saveMetadata } = require('../utils/metadata');
 
   async function createReactProject(projectPath, options) {
       const { projectName, useTypescript, useTailwind, useEslint, usePrettier, useRouter, packageManager } = options;
@@ -18,7 +20,7 @@ const { execSync } = require('child_process');
       // Install additional dependencies
       const devDeps = [];
       const deps = [];
-      if (useTailwind) devDeps.push('tailwindcss', 'postcss', 'autoprefixer');
+      if (useTailwind) devDeps.push('tailwindcss@latest', 'postcss@latest', 'autoprefixer@latest');
       if (useEslint) devDeps.push('eslint', 'eslint-config-prettier', 'eslint-plugin-react', 'eslint-plugin-react-hooks');
       if (usePrettier) devDeps.push('prettier');
       if (useRouter) deps.push('react-router-dom');
@@ -32,7 +34,7 @@ const { execSync } = require('child_process');
 
       // Configure Tailwind CSS
       if (useTailwind) {
-          execSync(`${packageManager} run tailwindcss init -p`, { stdio: 'inherit' });
+          // Write tailwind.config.js
           fs.writeFileSync(path.join(projectPath, 'tailwind.config.js'), `
   /** @type {import('tailwindcss').Config} */
   module.exports = {
@@ -41,10 +43,20 @@ const { execSync } = require('child_process');
       plugins: []
   };
           `);
-          fs.appendFileSync(path.join(projectPath, 'src/index.css'), `
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+          // Write postcss.config.js
+          fs.writeFileSync(path.join(projectPath, 'postcss.config.js'), `
+  module.exports = {
+      plugins: {
+          tailwindcss: {},
+          autoprefixer: {}
+      }
+  };
+          `);
+          // Replace index.css with Tailwind directives
+          fs.writeFileSync(path.join(projectPath, 'src/index.css'), `
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
           `);
       }
 
@@ -71,7 +83,7 @@ const { execSync } = require('child_process');
           }, null, 2));
       }
 
-      // Configure React Router (basic setup)
+      // Configure React Router
       if (useRouter) {
           const mainFile = path.join(projectPath, 'src', useTypescript ? 'main.tsx' : 'main.jsx');
           let mainContent = fs.readFileSync(mainFile, 'utf8');
@@ -85,6 +97,12 @@ const { execSync } = require('child_process');
           );
           fs.writeFileSync(mainFile, mainContent);
       }
+
+      // Initialize Git repository
+      initializeGit(projectPath);
+
+      // Save metadata
+      saveMetadata(projectPath, options);
   }
 
   module.exports = { createReactProject };
