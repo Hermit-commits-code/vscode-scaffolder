@@ -43,8 +43,8 @@ const { execSync } = require('child_process');
       plugins: []
   };
           `);
-          // Write postcss.config.js
-          fs.writeFileSync(path.join(projectPath, 'postcss.config.js'), `
+          // Write postcss.config.cjs
+          fs.writeFileSync(path.join(projectPath, 'postcss.config.cjs'), `
   module.exports = {
       plugins: {
           tailwindcss: {},

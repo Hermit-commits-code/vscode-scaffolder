@@ -2,7 +2,7 @@
   "name": "vscode-scaffolder",
   "displayName": "VSCode Scaffolder",
   "description": "Scaffold frontend projects",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.102.0"
   },
