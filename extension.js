@@ -26,7 +26,7 @@ const vscode = require('vscode');
                   // Prompt for project name
                   const projectName = await vscode.window.showInputBox({
                       prompt: 'Enter project name',
-                      placeHolder: 'my-react-app',
+                      placeHolder: 'my-app',
                       validateInput: (value) => {
                           if (!value || !/^[a-zA-Z0-9_-]+$/.test(value)) {
                               return 'Project name must be non-empty and contain only letters, numbers, hyphens, or underscores';
@@ -37,7 +37,7 @@ const vscode = require('vscode');
                   if (!projectName) return; // User cancelled
 
                   // Prompt for framework
-                  const framework = await vscode.window.showQuickPick(['React'], {
+                  const framework = await vscode.window.showQuickPick(['React', 'Vue'], {
                       placeHolder: 'Select framework'
                   });
                   if (!framework) return; // User cancelled
@@ -66,9 +66,9 @@ const vscode = require('vscode');
                   });
                   if (!usePrettier) return; // User cancelled
 
-                  // Prompt for React Router
+                  // Prompt for Router
                   const useRouter = await vscode.window.showQuickPick(['Yes', 'No'], {
-                      placeHolder: 'Use React Router?'
+                      placeHolder: framework === 'React' ? 'Use React Router?' : 'Use Vue Router?'
                   });
                   if (!useRouter) return; // User cancelled
 
