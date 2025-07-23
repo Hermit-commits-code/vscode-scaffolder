@@ -1,6 +1,5 @@
 const path = require('path');
   const { createReactProject } = require('./frameworks/react');
-  const { createVueProject } = require('./frameworks/vue');
 
   class Scaffolder {
       async createProject(options) {
@@ -13,8 +12,6 @@ const path = require('path');
 
           if (framework === 'react') {
               await createReactProject(projectPath, options);
-          } else if (framework === 'vue') {
-              await createVueProject(projectPath, options);
           } else {
               throw new Error(`Unsupported framework: ${framework}`);
           }

@@ -25,7 +25,7 @@ const vscode = require('vscode');
                   // Prompt for project name
                   const projectName = await vscode.window.showInputBox({
                       prompt: 'Enter project name',
-                      placeHolder: 'my-app',
+                      placeHolder: 'my-react-app',
                       validateInput: (value) => {
                           if (!value || !/^[a-zA-Z0-9_-]+$/.test(value)) {
                               return 'Project name must be non-empty and contain only letters, numbers, hyphens, or underscores';
@@ -36,7 +36,7 @@ const vscode = require('vscode');
                   if (!projectName) return; // User cancelled
 
                   // Prompt for framework
-                  const framework = await vscode.window.showQuickPick(['React', 'Vue'], {
+                  const framework = await vscode.window.showQuickPick(['React'], {
                       placeHolder: 'Select framework'
                   });
                   if (!framework) return; // User cancelled
@@ -65,14 +65,14 @@ const vscode = require('vscode');
                   });
                   if (!usePrettier) return; // User cancelled
 
-                  // Prompt for Router
+                  // Prompt for React Router
                   const useRouter = await vscode.window.showQuickPick(['Yes', 'No'], {
-                      placeHolder: `Use ${framework === 'React' ? 'React Router' : 'Vue Router'}?`
+                      placeHolder: 'Use React Router?'
                   });
                   if (!useRouter) return; // User cancelled
 
                   // Prompt for package manager
-                  const packageManager = await vscode.window.showQuickPick(['npm', 'yarn', 'pnpm'], {
+                  let packageManager = await vscode.window.showQuickPick(['npm', 'yarn', 'pnpm'], {
                       placeHolder: 'Select package manager'
                   });
                   if (!packageManager) return; // User cancelled
@@ -116,11 +116,54 @@ const vscode = require('vscode');
 
               // Initialize scaffolder and create project
               const scaffolder = new Scaffolder();
-              await scaffolder.createProject(options);
+              try {
+                  await scaffolder.createProject(options);
+              } catch (error) {
+                  if (error.message === 'pnpm-not-installed') {
+                      const action = await vscode.window.showWarningMessage(
+                          'pnpm is not installed globally. Would you like to install pnpm, use npm instead, or cancel?',
+                          'Install pnpm', 'Use npm', 'Cancel'
+                      );
+                      if (action === 'Install pnpm') {
+                          try {
+                              const terminal = vscode.window.createTerminal('pnpm Install');
+                              terminal.show();
+                              terminal.sendText('npm install -g pnpm');
+                              // Wait for installation to complete
+                              await new Promise((resolve, reject) => {
+                                  const checkInterval = setInterval(() => {
+                                      try {
+                                          require('child_process').execSync('pnpm --version', { stdio: 'ignore' });
+                                          clearInterval(checkInterval);
+                                          resolve();
+                                      } catch (e) {
+                                          // pnpm still not installed, continue checking
+                                      }
+                                  }, 1000);
+                                  setTimeout(() => {
+                                      clearInterval(checkInterval);
+                                      reject(new Error('pnpm installation timed out after 30 seconds'));
+                                  }, 30000);
+                              });
+                              await scaffolder.createProject(options);
+                          } catch (installError) {
+                              vscode.window.showErrorMessage(`Failed to install pnpm: ${installError.message}. Please run 'npm install -g pnpm' manually.`);
+                              return;
+                          }
+                      } else if (action === 'Use npm') {
+                          options.packageManager = 'npm';
+                          await scaffolder.createProject(options);
+                      } else {
+                          return; // Cancel
+                      }
+                  } else {
+                      vscode.window.showErrorMessage(`Failed to create project: ${error.message}`);
+                  }
+              }
 
               vscode.window.showInformationMessage(`Project ${options.projectName} created successfully!`);
           } catch (error) {
-              vscode.window.showErrorMessage(`Failed to create project: ${error.message}`);
+              vscode.window.showErrorMessage(`Unexpected error: ${error.message}`);
           }
       });
 

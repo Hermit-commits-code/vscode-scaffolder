@@ -7,9 +7,19 @@ const { execSync } = require('child_process');
   async function createReactProject(projectPath, options) {
       const { projectName, useTypescript, useTailwind, useEslint, usePrettier, useRouter, packageManager } = options;
 
+      // Check package manager availability
+      if (packageManager === 'pnpm') {
+          try {
+              execSync('pnpm --version', { stdio: 'ignore' });
+          } catch (error) {
+              throw new Error('pnpm-not-installed');
+          }
+      }
+
       // Create Vite project
       const template = useTypescript ? 'react-ts' : 'react';
-      execSync(`${packageManager} create vite@latest ${projectName} -- --template ${template}`, {
+      const viteCommand = packageManager === 'pnpm' ? 'create vite' : 'create vite@latest';
+      execSync(`${packageManager} ${viteCommand} ${projectName} -- --template ${template}`, {
           cwd: path.dirname(projectPath),
           stdio: 'inherit'
       });
@@ -34,7 +44,6 @@ const { execSync } = require('child_process');
 
       // Configure Tailwind CSS
       if (useTailwind) {
-          // Write tailwind.config.js
           fs.writeFileSync(path.join(projectPath, 'tailwind.config.js'), `
   /** @type {import('tailwindcss').Config} */
   module.exports = {
@@ -43,7 +52,6 @@ const { execSync } = require('child_process');
       plugins: []
   };
           `);
-          // Write postcss.config.cjs
           fs.writeFileSync(path.join(projectPath, 'postcss.config.cjs'), `
   module.exports = {
       plugins: {
@@ -52,7 +60,6 @@ const { execSync } = require('child_process');
       }
   };
           `);
-          // Replace index.css with Tailwind directives
           fs.writeFileSync(path.join(projectPath, 'src/index.css'), `
 @tailwind base;
 @tailwind components;
