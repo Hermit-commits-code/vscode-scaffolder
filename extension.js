@@ -1,6 +1,7 @@
 const vscode = require('vscode');
   const Scaffolder = require('./src/scaffolder');
   const { loadTemplates, saveTemplate } = require('./src/utils/templates');
+  const { execSync } = require('child_process');
 
   /**
    * @param {vscode.ExtensionContext} context
@@ -126,29 +127,72 @@ const vscode = require('vscode');
                       );
                       if (action === 'Install pnpm') {
                           try {
+                              // Try non-sudo installation first
                               const terminal = vscode.window.createTerminal('pnpm Install');
                               terminal.show();
                               terminal.sendText('npm install -g pnpm');
-                              // Wait for installation to complete
                               await new Promise((resolve, reject) => {
                                   const checkInterval = setInterval(() => {
                                       try {
-                                          require('child_process').execSync('pnpm --version', { stdio: 'ignore' });
+                                          execSync('pnpm --version', { stdio: 'ignore' });
                                           clearInterval(checkInterval);
                                           resolve();
                                       } catch (e) {
-                                          // pnpm still not installed, continue checking
+                                          // pnpm still not installed
                                       }
                                   }, 1000);
                                   setTimeout(() => {
                                       clearInterval(checkInterval);
-                                      reject(new Error('pnpm installation timed out after 30 seconds'));
+                                      reject(new Error('pnpm installation check timed out'));
                                   }, 30000);
                               });
                               await scaffolder.createProject(options);
                           } catch (installError) {
-                              vscode.window.showErrorMessage(`Failed to install pnpm: ${installError.message}. Please run 'npm install -g pnpm' manually.`);
-                              return;
+                              // Check for permission error
+                              if (installError.message.includes('EACCES')) {
+                                  const sudoAction = await vscode.window.showWarningMessage(
+                                      'Permission denied installing pnpm. Run with sudo or use npm?',
+                                      'Run with Sudo', 'Use npm', 'Cancel'
+                                  );
+                                  if (sudoAction === 'Run with Sudo') {
+                                      const sudoTerminal = vscode.window.createTerminal('pnpm Sudo Install');
+                                      sudoTerminal.show();
+                                      sudoTerminal.sendText('sudo npm install -g pnpm');
+                                      try {
+                                          await new Promise((resolve, reject) => {
+                                              const sudoCheckInterval = setInterval(() => {
+                                                  try {
+                                                      execSync('pnpm --version', { stdio: 'ignore' });
+                                                      clearInterval(sudoCheckInterval);
+                                                      resolve();
+                                                  } catch (e) {
+                                                      // pnpm still not installed
+                                                  }
+                                              }, 1000);
+                                              setTimeout(() => {
+                                                  clearInterval(sudoCheckInterval);
+                                                  reject(new Error('pnpm sudo installation check timed out'));
+                                              }, 30000);
+                                          });
+                                          await scaffolder.createProject(options);
+                                      } catch (sudoError) {
+                                          vscode.window.showErrorMessage(
+                                              `Failed to install pnpm with sudo: ${sudoError.message}. Please run 'sudo npm install -g pnpm' manually in a terminal.`
+                                          );
+                                          return;
+                                      }
+                                  } else if (sudoAction === 'Use npm') {
+                                      options.packageManager = 'npm';
+                                      await scaffolder.createProject(options);
+                                  } else {
+                                      return; // Cancel
+                                  }
+                              } else {
+                                  vscode.window.showErrorMessage(
+                                      `Failed to install pnpm: ${installError.message}. Please run 'npm install -g pnpm' manually.`
+                                  );
+                                  return;
+                              }
                           }
                       } else if (action === 'Use npm') {
                           options.packageManager = 'npm';

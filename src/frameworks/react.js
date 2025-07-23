@@ -16,16 +16,22 @@ const { execSync } = require('child_process');
           }
       }
 
+      // Ensure project directory exists
+      const projectDir = path.resolve(projectPath);
+      if (!fs.existsSync(projectDir)) {
+          fs.mkdirSync(projectDir, { recursive: true });
+      }
+
       // Create Vite project
       const template = useTypescript ? 'react-ts' : 'react';
       const viteCommand = packageManager === 'pnpm' ? 'create vite' : 'create vite@latest';
-      execSync(`${packageManager} ${viteCommand} ${projectName} -- --template ${template}`, {
-          cwd: path.dirname(projectPath),
+      execSync(`${packageManager} ${viteCommand} ${projectName} --template ${template}`, {
+          cwd: path.dirname(projectDir),
           stdio: 'inherit'
       });
 
       // Change to project directory
-      process.chdir(projectPath);
+      process.chdir(projectDir);
 
       // Install additional dependencies
       const devDeps = [];
@@ -44,7 +50,7 @@ const { execSync } = require('child_process');
 
       // Configure Tailwind CSS
       if (useTailwind) {
-          fs.writeFileSync(path.join(projectPath, 'tailwind.config.js'), `
+          fs.writeFileSync(path.join(projectDir, 'tailwind.config.js'), `
   /** @type {import('tailwindcss').Config} */
   module.exports = {
       content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -52,7 +58,7 @@ const { execSync } = require('child_process');
       plugins: []
   };
           `);
-          fs.writeFileSync(path.join(projectPath, 'postcss.config.cjs'), `
+          fs.writeFileSync(path.join(projectDir, 'postcss.config.cjs'), `
   module.exports = {
       plugins: {
           '@tailwindcss/postcss': {},
@@ -60,7 +66,7 @@ const { execSync } = require('child_process');
       }
   };
           `);
-          fs.writeFileSync(path.join(projectPath, 'src/index.css'), `
+          fs.writeFileSync(path.join(projectDir, 'src/index.css'), `
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -69,7 +75,7 @@ const { execSync } = require('child_process');
 
       // Configure ESLint
       if (useEslint) {
-          fs.writeFileSync(path.join(projectPath, '.eslintrc.json'), JSON.stringify({
+          fs.writeFileSync(path.join(projectDir, '.eslintrc.json'), JSON.stringify({
               env: { browser: true, es2021: true },
               extends: ['eslint:recommended', 'plugin:react/recommended', 'plugin:react-hooks/recommended', 'prettier'],
               parserOptions: { ecmaVersion: 12, sourceType: 'module' },
@@ -80,7 +86,7 @@ const { execSync } = require('child_process');
 
       // Configure Prettier
       if (usePrettier) {
-          fs.writeFileSync(path.join(projectPath, '.prettierrc'), JSON.stringify({
+          fs.writeFileSync(path.join(projectDir, '.prettierrc'), JSON.stringify({
               semi: true,
               trailingComma: 'es5',
               singleQuote: true,
@@ -92,7 +98,7 @@ const { execSync } = require('child_process');
 
       // Configure React Router
       if (useRouter) {
-          const mainFile = path.join(projectPath, 'src', useTypescript ? 'main.tsx' : 'main.jsx');
+          const mainFile = path.join(projectDir, 'src', useTypescript ? 'main.tsx' : 'main.jsx');
           let mainContent = fs.readFileSync(mainFile, 'utf8');
           mainContent = mainContent.replace(
               `import App from './App'`,
@@ -106,10 +112,10 @@ const { execSync } = require('child_process');
       }
 
       // Initialize Git repository
-      initializeGit(projectPath);
+      initializeGit(projectDir);
 
       // Save metadata
-      saveMetadata(projectPath, options);
+      saveMetadata(projectDir, options);
   }
 
   module.exports = { createReactProject };
